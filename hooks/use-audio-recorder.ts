@@ -11,7 +11,7 @@ export type AudioRecorderError =
 
 export interface UseAudioRecorderReturn {
   startRecording: () => Promise<void>
-  stopAndSubmit: (syllableCount: number) => Promise<void>
+  stopAndSubmit: () => Promise<void>
   error: AudioRecorderError | null
   clearError: () => void
 }
@@ -80,7 +80,7 @@ export function useAudioRecorder(
   }, [onStateChange])
 
   const stopAndSubmit = useCallback(
-    async (syllableCount: number) => {
+    async () => {
       const mediaRecorder = mediaRecorderRef.current
       if (!mediaRecorder) return
 
