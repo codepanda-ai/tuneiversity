@@ -1,18 +1,34 @@
 import os
 import random
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, Request as FastAPIRequest 
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any
+from vercel.headers import set_headers
 
 app = FastAPI(title="Tuneiversity API")
 
-public_api_url = os.getenv("NEXT_PUBLIC_API_URL", "")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000", public_api_url],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# public_api_url = os.getenv("NEXT_PUBLIC_API_URL", "")
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["http://localhost:3000", "http://localhost:8000", public_api_url],
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+# )
+
+@app.middleware("http")
+async def vercel_headers_middleware(request: FastAPIRequest, call_next):
+    """
+    Middleware to set Vercel headers.
+
+    Args:
+        request: FastAPI request
+        call_next: Next middleware in chain
+
+    Returns:
+        Response from next middleware
+    """
+    set_headers(dict(request.headers))
+    return await call_next(request)
 
 MOCK_SONGS: list[dict[str, Any]] = [
     {
