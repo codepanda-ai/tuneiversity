@@ -1,12 +1,17 @@
-from fastapi import FastAPI
+import os
+import random
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Any
 
 app = FastAPI(title="Tuneiversity API")
 
+_raw = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+allowed_origins = [o.strip() for o in _raw.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -42,3 +47,10 @@ MOCK_SONGS: list[dict[str, Any]] = [
 @app.get("/api/songs")
 async def get_songs() -> list[dict[str, Any]]:
     return MOCK_SONGS
+
+
+@app.post("/api/score")
+async def score_audio(audio: UploadFile = File(...)) -> dict[str, int]:
+    # Drain the upload to avoid uvicorn body warnings (mock — contents not used)
+    await audio.read()
+    return {"score": random.randint(0, 100)}

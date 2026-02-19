@@ -6,6 +6,7 @@ import { LyricsDisplay } from "@/components/lyrics-display"
 import { AudioControls, type RecordingState } from "@/components/audio-controls"
 import { FeedbackSection } from "@/components/feedback-section"
 import { Button } from "@/components/ui/button"
+import { useAudioRecorder } from "@/hooks/use-audio-recorder"
 
 const SONG_DATA = {
   title: "小幸运",
@@ -253,14 +254,6 @@ const SONG_DATA = {
   ],
 }
 
-function generateFeedback(syllableCount: number) {
-  const score = Math.floor(Math.random() * 30) + 65
-  const correctness = Array.from({ length: syllableCount }, () =>
-    Math.random() > (score < 70 ? 0.5 : 0.25)
-  )
-  return { score, correctness }
-}
-
 export default function PracticePage() {
   const [currentLineIndex, setCurrentLineIndex] = useState(0)
   const [recordingState, setRecordingState] = useState<RecordingState>("idle")
@@ -276,22 +269,26 @@ export default function PracticePage() {
     correct: feedback ? feedback.syllableCorrectness[i] : undefined,
   }))
 
+  const { startRecording, stopAndSubmit, error, clearError } = useAudioRecorder(
+    (score) => {
+      const correctness = Array.from(
+        { length: currentLine.syllables.length },
+        () => Math.random() > (score < 70 ? 0.5 : 0.25)
+      )
+      setFeedback({ score, syllableCorrectness: correctness })
+    },
+    (state) => setRecordingState(state)
+  )
+
   const handleRecord = useCallback(() => {
     if (recordingState === "idle") {
       setFeedback(null)
-      setRecordingState("recording")
+      clearError()
+      startRecording()
     } else if (recordingState === "recording") {
-      setRecordingState("processing")
-      setTimeout(() => {
-        const result = generateFeedback(currentLine.syllables.length)
-        setFeedback({
-          score: result.score,
-          syllableCorrectness: result.correctness,
-        })
-        setRecordingState("idle")
-      }, 1500)
+      stopAndSubmit(currentLine.syllables.length)
     }
-  }, [recordingState, currentLine.syllables.length])
+  }, [recordingState, currentLine.syllables.length, startRecording, stopAndSubmit, clearError])
 
   const handleTryAgain = useCallback(() => {
     setFeedback(null)
@@ -339,6 +336,16 @@ export default function PracticePage() {
           onTryAgain={handleTryAgain}
           onNextLine={handleNextLine}
         />
+      )}
+
+      {error && (
+        <p className="text-sm text-destructive text-center px-6 pb-2">
+          {error === "permission_denied"
+            ? "Microphone access was denied. Please allow microphone access and try again."
+            : error === "not_supported"
+            ? "Audio recording is not supported in this browser."
+            : "Something went wrong. Please try again."}
+        </p>
       )}
 
       <div className="mt-auto px-4 pb-6">
